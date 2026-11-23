@@ -1,0 +1,73 @@
+.TH TSK_TIMELINE 1
+.SH NAME
+tsk_timeline - Export a forensic timeline from a disk image, with optional filtering by timestamp type.
+.SH SYNOPSIS
+.B tsk_timeline [-vVm] [ -t
+.I types
+.B ] [ -i
+.I imgtype
+.B ] [ -b
+.I dev_sector_size
+.B ] [ -z
+.I zone
+.B ] [ -s
+.I seconds
+.B ] [ -k
+.I password
+.B ]
+.I image [images]
+.SH DESCRIPTION
+.B tsk_timeline
+examines each of the file systems in a disk image and exports a timeline in the mactime body file format (the same format produced by tsk_gettimes and 'fls -m').  The output can be used directly as input to mactime to make a timeline of file activity, and can be restricted to selected timestamp types with the \-t option.  Entries that have no timestamp of the selected types are omitted from the output.  The data is printed to STDOUT, which can then be redirected to a file.
+
+The arguments are as follows:
+.IP "-t types"
+The timestamp types to include in the timeline, given as a combination of the letters
+.B m
+(last modification time),
+.B a
+(last access time),
+.B c
+(metadata change time) and
+.B b
+(creation / birth time).  For example, '\-t mb' exports only modification and creation times.  If not given, all timestamp types (macb) are exported and the output is identical to tsk_gettimes.
+.IP -v
+verbose output to stderr
+.IP -V
+Print version
+.IP -m
+Calculate the MD5 hash of each file and include it in the output (slow).
+.IP "-i imgtype"
+The format of the image file, such as raw.
+Use '\-i list' to list the supported types.
+If not given, autodetection methods are used.
+.IP "-b dev_sector_size"
+The size (in bytes) of the device sectors.
+If not given, autodetection methods are used.
+.IP "-k password"
+Decryption password for encrypted volumes.
+.IP "-s seconds"
+The time skew of the original system in seconds.  For example, if the
+original system was 100 seconds slow, this value would be \-100.
+.IP "-z zone"
+The ASCII string of the time zone of the original system.  For
+example, EST or GMT.  These strings must be defined by your operating
+system and may vary.
+.IP "image [images]"
+The disk or partition image to read, whose format is given with '\-i'.
+Multiple image file names can be given if the image is split into multiple segments.
+If only one image file is given, and its name is the first in a sequence (e.g., as indicated by ending in '.001'), subsequent image segments will be included automatically.
+
+.SH EXAMPLES
+To export a full timeline of image.dd:
+
+	# tsk_timeline ./image.dd > body.txt
+
+To export only modification and creation times and build a timeline with mactime:
+
+	# tsk_timeline -t mb ./image.dd | mactime -b - > timeline.txt
+
+.SH AUTHOR
+Brian Carrier <carrier at sleuthkit dot org>
+
+Send documentation updates to <doc-updates at sleuthkit dot org>

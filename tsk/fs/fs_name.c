@@ -579,6 +579,32 @@ tsk_fs_name_print_mac(FILE * hFile, const TSK_FS_FILE * fs_file,
 /**
  * \internal
  *
+ * Print a single timestamp field of a mactime body file line.  Prints 0
+ * when the timestamp is 0 or when the field was filtered out.  A '|'
+ * field separator is appended when with_sep is 1.
+ *
+ * @param hFile handle to print results to
+ * @param a_time timestamp to print
+ * @param time_skew number of seconds skew to adjust time
+ * @param include 0 if the field was filtered out (prints 0)
+ * @param with_sep 1 to append the '|' field separator
+ */
+static void
+print_mac_time(FILE * hFile, time_t a_time, int32_t time_skew,
+    uint8_t include, int with_sep)
+{
+    uint32_t val = (include) ? (uint32_t) a_time : 0;
+    if (val)
+        tsk_fprintf(hFile, "%" PRIu32, val - time_skew);
+    else
+        tsk_fprintf(hFile, "%" PRIu32, val);
+    if (with_sep)
+        tsk_fprintf(hFile, "|");
+}
+
+/**
+ * \internal
+ *
  * Print output in the format that mactime reads.
  *
  * If the flags in the fs_file->meta structure are set to FS_FLAG_ALLOC
@@ -601,12 +627,83 @@ tsk_fs_name_print_mac_md5(FILE * hFile, const TSK_FS_FILE * fs_file,
     const char *prefix, int32_t time_skew,
     const unsigned char *hash_results)
 {
+    tsk_fs_name_print_mac_md5_mask(hFile, fs_file, a_path, fs_attr, prefix,
+        time_skew, hash_results, TSK_FS_MAC_TYPE_ALL);
+}
+
+/**
+ * \internal
+ *
+ * Print output in the format that mactime reads, including only the
+ * timestamp types selected in time_mask.  Timestamp fields that are not
+ * selected are printed as 0 and entries that have no non-zero timestamp
+ * among the selected types are not printed at all.
+ *
+ * If the flags in the fs_file->meta structure are set to FS_FLAG_ALLOC
+ * then it is assumed that the inode has been reallocated and the
+ * contents are not displayed
+ * Newline is not printed at the end
+ *
+ * fs is not required (only used for block size).
+ * @param hFile handle to print results to
+ * @param fs_file File to print details about
+ * @param a_path Parent directory of file (needs to end with "/")
+ * @param fs_attr Attribute in file that is being called for (NULL for non-NTFS)
+ * @param prefix Path of mounting point for image
+ * @param time_skew number of seconds skew to adjust time
+ * @param hash_results Holds the calculated md5 hash
+ * @param time_mask Bitmask of TSK_FS_MAC_TYPE_ENUM values selecting the
+ * timestamp types to include (TSK_FS_MAC_TYPE_ALL for all)
+ * @return 1 if the entry was printed, 0 if it was skipped
+ */
+uint8_t
+tsk_fs_name_print_mac_md5_mask(FILE * hFile, const TSK_FS_FILE * fs_file,
+    const char *a_path, const TSK_FS_ATTR * fs_attr,
+    const char *prefix, int32_t time_skew,
+    const unsigned char *hash_results, uint8_t time_mask)
+{
     char ls[12];
     size_t i;
     uint8_t isADS = 0;
 
     if ((!hFile) || (!fs_file))
-        return;
+        return 0;
+
+    if (time_mask == 0)
+        time_mask = TSK_FS_MAC_TYPE_ALL;
+
+    /* When a subset of the timestamp types was requested, skip entries
+     * that have no non-zero timestamp among the selected types. */
+    if (time_mask != TSK_FS_MAC_TYPE_ALL) {
+        uint8_t found = 0;
+        if (fs_file->meta) {
+            if ((fs_attr)
+                && (fs_attr->type == TSK_FS_ATTR_TYPE_NTFS_FNAME)) {
+                if (((time_mask & TSK_FS_MAC_TYPE_A)
+                        && fs_file->meta->time2.ntfs.fn_atime)
+                    || ((time_mask & TSK_FS_MAC_TYPE_M)
+                        && fs_file->meta->time2.ntfs.fn_mtime)
+                    || ((time_mask & TSK_FS_MAC_TYPE_C)
+                        && fs_file->meta->time2.ntfs.fn_ctime)
+                    || ((time_mask & TSK_FS_MAC_TYPE_B)
+                        && fs_file->meta->time2.ntfs.fn_crtime))
+                    found = 1;
+            }
+            else {
+                if (((time_mask & TSK_FS_MAC_TYPE_A)
+                        && fs_file->meta->atime)
+                    || ((time_mask & TSK_FS_MAC_TYPE_M)
+                        && fs_file->meta->mtime)
+                    || ((time_mask & TSK_FS_MAC_TYPE_C)
+                        && fs_file->meta->ctime)
+                    || ((time_mask & TSK_FS_MAC_TYPE_B)
+                        && fs_file->meta->crtime))
+                    found = 1;
+            }
+        }
+        if (!found)
+            return 0;
+    }
 
     /* see if we are going to be printing the name of the attribute
      * We don't do it for FNAME attributes, which we handle specially below.
@@ -706,59 +803,26 @@ tsk_fs_name_print_mac_md5(FILE * hFile, const TSK_FS_FILE * fs_file,
         // special case for NTFS FILE_NAME attribute
         if ((fs_attr) && (fs_attr->type == TSK_FS_ATTR_TYPE_NTFS_FNAME)) {
             /* atime, mtime, ctime, crtime */
-            if (fs_file->meta->time2.ntfs.fn_atime)
-                tsk_fprintf(hFile, "%" PRIu32 "|",
-                    fs_file->meta->time2.ntfs.fn_atime - time_skew);
-            else
-                tsk_fprintf(hFile, "%" PRIu32 "|",
-                    fs_file->meta->time2.ntfs.fn_atime);
-
-            if (fs_file->meta->time2.ntfs.fn_mtime)
-                tsk_fprintf(hFile, "%" PRIu32 "|",
-                    fs_file->meta->time2.ntfs.fn_mtime - time_skew);
-            else
-                tsk_fprintf(hFile, "%" PRIu32 "|",
-                    fs_file->meta->time2.ntfs.fn_mtime);
-
-            if (fs_file->meta->time2.ntfs.fn_ctime)
-                tsk_fprintf(hFile, "%" PRIu32 "|",
-                    fs_file->meta->time2.ntfs.fn_ctime - time_skew);
-            else
-                tsk_fprintf(hFile, "%" PRIu32 "|",
-                    fs_file->meta->time2.ntfs.fn_ctime);
-
-            if (fs_file->meta->time2.ntfs.fn_crtime)
-                tsk_fprintf(hFile, "%" PRIu32,
-                    fs_file->meta->time2.ntfs.fn_crtime - time_skew);
-            else
-                tsk_fprintf(hFile, "%" PRIu32,
-                    fs_file->meta->time2.ntfs.fn_crtime);
+            print_mac_time(hFile, fs_file->meta->time2.ntfs.fn_atime,
+                time_skew, time_mask & TSK_FS_MAC_TYPE_A, 1);
+            print_mac_time(hFile, fs_file->meta->time2.ntfs.fn_mtime,
+                time_skew, time_mask & TSK_FS_MAC_TYPE_M, 1);
+            print_mac_time(hFile, fs_file->meta->time2.ntfs.fn_ctime,
+                time_skew, time_mask & TSK_FS_MAC_TYPE_C, 1);
+            print_mac_time(hFile, fs_file->meta->time2.ntfs.fn_crtime,
+                time_skew, time_mask & TSK_FS_MAC_TYPE_B, 0);
         }
         else {
             /* atime, mtime, ctime, crtime */
-            if (fs_file->meta->atime)
-                tsk_fprintf(hFile, "%" PRIu32 "|",
-                    fs_file->meta->atime - time_skew);
-            else
-                tsk_fprintf(hFile, "%" PRIu32 "|", fs_file->meta->atime);
-
-            if (fs_file->meta->mtime)
-                tsk_fprintf(hFile, "%" PRIu32 "|",
-                    fs_file->meta->mtime - time_skew);
-            else
-                tsk_fprintf(hFile, "%" PRIu32 "|", fs_file->meta->mtime);
-
-            if (fs_file->meta->ctime)
-                tsk_fprintf(hFile, "%" PRIu32 "|",
-                    fs_file->meta->ctime - time_skew);
-            else
-                tsk_fprintf(hFile, "%" PRIu32 "|", fs_file->meta->ctime);
-
-            if (fs_file->meta->crtime)
-                tsk_fprintf(hFile, "%" PRIu32,
-                    fs_file->meta->crtime - time_skew);
-            else
-                tsk_fprintf(hFile, "%" PRIu32, fs_file->meta->crtime);
+            print_mac_time(hFile, fs_file->meta->atime,
+                time_skew, time_mask & TSK_FS_MAC_TYPE_A, 1);
+            print_mac_time(hFile, fs_file->meta->mtime,
+                time_skew, time_mask & TSK_FS_MAC_TYPE_M, 1);
+            print_mac_time(hFile, fs_file->meta->ctime,
+                time_skew, time_mask & TSK_FS_MAC_TYPE_C, 1);
+            print_mac_time(hFile, fs_file->meta->crtime,
+                time_skew, time_mask & TSK_FS_MAC_TYPE_B, 0);
         }
     }
+    return 1;
 }

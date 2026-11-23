@@ -1,0 +1,17 @@
+{
+  "root": "/home/dev/feedback/uid34553",
+  "B": "/home/dev/feedback/uid34553",
+  "sha": "1163ffb7b60f1275beeec5fa24008cd7c7e76f72",
+  "wslDistro": "Ubuntu-26.04",
+  "source": {
+    "owner": "sleuthkit",
+    "repo": "sleuthkit",
+    "sha": "1163ffb7b60f1275beeec5fa24008cd7c7e76f72"
+  },
+  "fork": {
+    "owner": "Rrr119",
+    "repo": "sleuthkit",
+    "cloneUrl": "https://github.com/Rrr119/sleuthkit.git"
+  },
+  "at": "2026-11-23T04:07:32.361Z"
+}

@@ -1146,9 +1146,30 @@ extern "C" {
         TSK_FS_FLS_DIR = 0x08,
         TSK_FS_FLS_FULL = 0x10,
         TSK_FS_FLS_MAC = 0x20,
-		TSK_FS_FLS_HASH = 0x40
+		TSK_FS_FLS_HASH = 0x40,
+        TSK_FS_FLS_MAC_M = 0x80,    ///< With TSK_FS_FLS_MAC: include modification time in output
+        TSK_FS_FLS_MAC_A = 0x100,   ///< With TSK_FS_FLS_MAC: include access time in output
+        TSK_FS_FLS_MAC_C = 0x200,   ///< With TSK_FS_FLS_MAC: include metadata change time in output
+        TSK_FS_FLS_MAC_B = 0x400    ///< With TSK_FS_FLS_MAC: include creation (birth) time in output
     };
     typedef enum TSK_FS_FLS_FLAG_ENUM TSK_FS_FLS_FLAG_ENUM;
+
+    /**
+     * \ingroup fslib
+     * Bit mask used to select which timestamp types are included when
+     * exporting a mactime (body file) timeline.  Entries that have no
+     * non-zero timestamp among the selected types are omitted from the
+     * output.
+     */
+    enum TSK_FS_MAC_TYPE_ENUM {
+        TSK_FS_MAC_TYPE_M = 0x1,    ///< Modification time (mtime)
+        TSK_FS_MAC_TYPE_A = 0x2,    ///< Access time (atime)
+        TSK_FS_MAC_TYPE_C = 0x4,    ///< Metadata change time (ctime)
+        TSK_FS_MAC_TYPE_B = 0x8,    ///< Creation / birth time (crtime)
+        TSK_FS_MAC_TYPE_ALL = 0xf   ///< All timestamp types
+    };
+    typedef enum TSK_FS_MAC_TYPE_ENUM TSK_FS_MAC_TYPE_ENUM;
+
     extern uint8_t tsk_fs_fls(TSK_FS_INFO * fs,
         TSK_FS_FLS_FLAG_ENUM lclflags, TSK_INUM_T inode,
         TSK_FS_DIR_WALK_FLAG_ENUM flags, TSK_TCHAR * pre, int32_t skew);

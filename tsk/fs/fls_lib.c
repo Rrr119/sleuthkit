@@ -69,29 +69,43 @@ printit(TSK_FS_FILE * fs_file, const char *a_path,
 
 
     if (fls_data->flags & TSK_FS_FLS_MAC) {
+        uint8_t time_mask = 0;
+        uint8_t printed;
+
+        if (fls_data->flags & TSK_FS_FLS_MAC_M)
+            time_mask |= TSK_FS_MAC_TYPE_M;
+        if (fls_data->flags & TSK_FS_FLS_MAC_A)
+            time_mask |= TSK_FS_MAC_TYPE_A;
+        if (fls_data->flags & TSK_FS_FLS_MAC_C)
+            time_mask |= TSK_FS_MAC_TYPE_C;
+        if (fls_data->flags & TSK_FS_FLS_MAC_B)
+            time_mask |= TSK_FS_MAC_TYPE_B;
+        if (time_mask == 0)
+            time_mask = TSK_FS_MAC_TYPE_ALL;
+
         if (fls_data->flags & TSK_FS_FLS_HASH) {
             if(0 == tsk_fs_file_hash_calc(fs_file, &hash_results,
                 TSK_BASE_HASH_MD5)){
-				tsk_fs_name_print_mac_md5(stdout, fs_file, a_path, fs_attr,
-					fls_data->macpre, fls_data->sec_skew,
-					hash_results.md5_digest);
-                                tsk_printf("\n");
+				printed = tsk_fs_name_print_mac_md5_mask(stdout, fs_file,
+					a_path, fs_attr, fls_data->macpre, fls_data->sec_skew,
+					hash_results.md5_digest, time_mask);
 			}
 			else {
 	            unsigned char null_buf[16];
 				// If the hash calculation had errors, pass in a buffer of nulls
 				memset(null_buf, 0, 16);
-				tsk_fs_name_print_mac_md5(stdout, fs_file, a_path, fs_attr,
-					fls_data->macpre, fls_data->sec_skew,
-					null_buf);
-                                tsk_printf("\n");
+				printed = tsk_fs_name_print_mac_md5_mask(stdout, fs_file,
+					a_path, fs_attr, fls_data->macpre, fls_data->sec_skew,
+					null_buf, time_mask);
 			}
         }
         else {
-            tsk_fs_name_print_mac(stdout, fs_file, a_path,
-                fs_attr, fls_data->macpre, fls_data->sec_skew);
-            tsk_printf("\n");
+            printed = tsk_fs_name_print_mac_md5_mask(stdout, fs_file,
+                a_path, fs_attr, fls_data->macpre, fls_data->sec_skew,
+                NULL, time_mask);
         }
+        if (printed)
+            tsk_printf("\n");
     }
     else if (fls_data->flags & TSK_FS_FLS_LONG) {
         tsk_fs_name_print_long(stdout, fs_file, a_path, fs_file->fs_info,

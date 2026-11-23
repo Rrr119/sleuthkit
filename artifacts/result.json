@@ -1,0 +1,18 @@
+{
+  "uid": "34553",
+  "harness": "Codex CLI",
+  "snapshotUrl": "https://github.com/Rrr119/sleuthkit/commit/1163ffb7b60f1275beeec5fa24008cd7c7e76f72",
+  "harnessVersion": "codex-cli 0.167.2",
+  "operatingSystem": "Ubuntu 26.04.1 LTS",
+  "operatingSystemCell": [
+    "MacOS/Linux"
+  ],
+  "outputDirectory": "/home/dev/feedback/uid34553",
+  "wslDistro": "Ubuntu-26.04",
+  "B": {
+    "success": false,
+    "canceled": true,
+    "error": "任务已取消",
+    "side": "B"
+  }
+}
